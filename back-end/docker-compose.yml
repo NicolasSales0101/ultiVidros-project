@@ -1,0 +1,16 @@
+# Use root/example as user/password credentials
+version: '3.8'
+
+services:
+
+  mysql-db:
+    image: mysql:latest
+    container_name: mysql_container
+    restart: always
+    environment:
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+        MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - "${MYSQL_PORT}:${MYSQL_PORT}"
+    cap_add:
+      - SYS_NICE # Desabilitar o aviso "mbind : Operation not permitted"
