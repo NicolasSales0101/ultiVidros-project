@@ -16,5 +16,13 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 	glasses.Put("/", controllers.UpdateGlass)
 	glasses.Delete("/:id", controllers.DeleteGlass)
 
+	// Common glasses routes
+	commonGlss := glasses.Group("/common")
+	commonGlss.Get("/", controllers.ShowCommonGlasses)
+
+	// Tempered glasses routes
+	temperedGlss := glasses.Group("/tempered")
+	temperedGlss.Get("/", controllers.ShowTemperedGlasses)
+
 	return router
 }
