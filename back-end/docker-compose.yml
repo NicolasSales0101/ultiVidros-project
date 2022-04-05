@@ -14,3 +14,4 @@ services:
       - "${MYSQL_PORT}:${MYSQL_PORT}"
     cap_add:
       - SYS_NICE # Desabilitar o aviso "mbind : Operation not permitted"
+  # command: "mysql && create database ultividros_db;"

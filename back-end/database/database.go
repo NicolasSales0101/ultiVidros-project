@@ -30,7 +30,7 @@ func StartDB() {
 
 	database, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("error:", err)
+		log.Fatal("error in connection to database:", err)
 	}
 
 	db = database
