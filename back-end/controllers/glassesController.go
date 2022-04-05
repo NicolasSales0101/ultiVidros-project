@@ -55,7 +55,15 @@ func CreateGlass(fctx *fiber.Ctx) error {
 		})
 	}
 
-	err := db.Create(&glass).Error
+	err := glass.BeforeCreate(db)
+	if err != nil {
+		log.Println("Error in method post CreateGlass: ", err)
+		return fctx.Status(fiber.StatusMethodNotAllowed).JSON(fiber.Map{
+			"error": "cannot create uuid in model: " + err.Error(),
+		})
+	}
+
+	err = db.Create(&glass).Error
 	if err != nil {
 		log.Println("Error in method post CreateGlass: ", err)
 		return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
