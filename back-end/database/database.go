@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/NicolasSales0101/ultiVidros-project/back-end/database/migrations"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -40,6 +41,8 @@ func StartDB() {
 	config.SetMaxIdleConns(10)
 	config.SetMaxOpenConns(100)
 	config.SetConnMaxLifetime(time.Hour)
+
+	migrations.RunMigrations(db)
 }
 
 func GetDatabase() *gorm.DB {
