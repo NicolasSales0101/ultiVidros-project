@@ -13,11 +13,12 @@ func ShowCommonGlasses(fctx *fiber.Ctx) error {
 
 	var commonGlasses []models.Glass
 
-	err := db.Where("category = ?", "common").Find(&commonGlasses).Error
+	//err := db.Where("category = ?", "common").Find(&commonGlasses).Error
+	err := db.Find(&commonGlasses, "category = ?", "common").Error
 	if err != nil {
-		log.Println("Error in methot get ShowTemperedGlasses:", err.Error())
+		log.Println("Error in methot get ShowCommonGlasses:", err.Error())
 		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "cannot find tempered glasses: " + err.Error(),
+			"error": "cannot find common glasses: " + err.Error(),
 		})
 	}
 

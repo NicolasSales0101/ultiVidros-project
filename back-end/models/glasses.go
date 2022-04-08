@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -8,9 +9,9 @@ import (
 )
 
 type Glass struct {
-	ID              uuid.UUID      `json:"id" gorm:"type:uuid;primary_key;"`
+	ID              string         `json:"id" gorm:"primary_key"`
 	Name            string         `json:"name"`
-	Description     string         `json:description`
+	Description     string         `json:"description"`
 	Price           float64        `json:"price"`
 	ImageURL        string         `json:"img_url"`
 	HeightAvailable float64        `json:"height_available"`
@@ -23,12 +24,12 @@ type Glass struct {
 	DeletedAt       gorm.DeletedAt `json:"deleted" gorm:"index"`
 }
 
-func (glass *Glass) BeforeCreate(scope *gorm.DB) error {
-	id, err := uuid.NewV4()
-	if err != nil {
-		return err
-	}
+func (glass *Glass) BeforeCreate(scope *gorm.DB) (err error) {
 
-	scope.Statement.SetColumn("ID", uuid.String())
+	newId := uuid.New()
+	id := strings.Replace(newId.String(), "-", "", -1)
+
+	scope.Statement.SetColumn("ID", id)
+
 	return nil
 }

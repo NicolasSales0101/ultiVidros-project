@@ -10,11 +10,11 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 
 	// General glasses routes
 	glasses := main.Group("/glasses")
-	glasses.Get("/:id", controllers.ShowGlass)
+	glasses.Get("/single-glass/:id", controllers.ShowGlass)
 	glasses.Get("/", controllers.ShowGlasses)
 	glasses.Post("/", controllers.CreateGlass)
 	glasses.Put("/", controllers.UpdateGlass)
-	glasses.Delete("/:id", controllers.DeleteGlass)
+	glasses.Delete("/delete-glass/:id", controllers.DeleteGlass)
 
 	// Common glasses routes
 	commonGlss := glasses.Group("/common")

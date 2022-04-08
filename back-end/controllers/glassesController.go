@@ -15,11 +15,11 @@ func ShowGlass(fctx *fiber.Ctx) error {
 	db := database.GetDatabase()
 
 	var glass models.Glass
-	err := db.First(&glass, id).Error
+	err := db.First(&glass, "id = ?", id).Error
 	if err != nil {
 		log.Println("Error in method get ShowGlass (specific id in url params): ", err.Error())
 		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "cannot find book: " + err.Error(),
+			"error": "cannot find glass: " + err.Error(),
 		})
 	}
 
@@ -48,24 +48,16 @@ func CreateGlass(fctx *fiber.Ctx) error {
 
 	var glass models.Glass
 
-	if err := fctx.BodyParser(glass); err != nil {
+	if err := fctx.BodyParser(&glass); err != nil {
 		log.Println("Error in method post CreateGlass: ", err)
 		return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
 			"error": "cannot trasnform JSON to struct: " + err.Error(),
 		})
 	}
 
-	err := glass.BeforeCreate(db)
+	err := db.Create(&glass).Error
 	if err != nil {
-		log.Println("Error in method post CreateGlass: ", err)
-		return fctx.Status(fiber.StatusMethodNotAllowed).JSON(fiber.Map{
-			"error": "cannot create uuid in model: " + err.Error(),
-		})
-	}
-
-	err = db.Create(&glass).Error
-	if err != nil {
-		log.Println("Error in method post CreateGlass: ", err)
+		log.Println("Error in method post CreateGlass:", err)
 		return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
 			"error": "cannot create glass: " + err.Error(),
 		})
@@ -80,14 +72,14 @@ func UpdateGlass(fctx *fiber.Ctx) error {
 
 	var glass models.Glass
 
-	if err := fctx.BodyParser(glass); err != nil {
+	if err := fctx.BodyParser(&glass); err != nil {
 		log.Println("Error in method post UpdateGlass: ", err)
 		return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
 			"error": "cannot trasnform JSON to struct: " + err.Error(),
 		})
 	}
 
-	err := db.Save(&glass).Error
+	err := db.Omit("CreatedAt").Save(&glass).Error
 	if err != nil {
 		log.Println("Error in method post CreateGlass: ", err)
 		return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
@@ -104,7 +96,7 @@ func DeleteGlass(fctx *fiber.Ctx) error {
 
 	db := database.GetDatabase()
 
-	err := db.Delete(&models.Glass{}, id).Error
+	err := db.Delete(&models.Glass{}, "id = ?", id).Error
 	if err != nil {
 		log.Println("Error in method delete DeleteGlass:", err.Error())
 		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
