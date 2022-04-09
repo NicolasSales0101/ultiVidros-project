@@ -6,7 +6,10 @@ import (
 )
 
 func ConfigRoutes(router *fiber.App) *fiber.App {
+
+	// General main routes
 	main := router.Group("/api/v1")
+	main.Post("/login", controllers.Login)
 
 	// General glasses routes
 	glasses := main.Group("/glasses")
@@ -23,6 +26,12 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 	// Tempered glasses routes
 	temperedGlss := glasses.Group("/tempered")
 	temperedGlss.Get("/", controllers.ShowTemperedGlasses)
+
+	// ---------------------------------------------------------
+
+	// General users routes
+	users := main.Group("/users")
+	users.Get("/", controllers.CreateUser)
 
 	return router
 }
