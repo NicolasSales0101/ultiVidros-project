@@ -1,35 +1,29 @@
 package middlewares
 
 import (
-	"github.com/NicolasSales0101/ultiVidros-project/back-end/services"
+	"log"
+	"os"
+
 	"github.com/gofiber/fiber/v2"
+	jwtware "github.com/gofiber/jwt/v2"
+	"github.com/joho/godotenv"
 )
 
-// Attention here - In Progress
+func AuthRequired() func(fctx *fiber.Ctx) error {
 
-func Auth() fiber.Handler {
-
-	return func(fctx *fiber.Ctx) error {
-
-		const BearerSchema = "Bearer "
-		header := fctx.GetReqHeaders()
-		for _, v := range header {
-			if v == "" {
-				return fctx.SendStatus(fiber.StatusNetworkAuthenticationRequired)
-			}
-		}
-
-		var token string
-
-		for _, v := range header {
-			token = v[len(BearerSchema):]
-		}
-
-		if !services.NewJWTService().ValidateToken(token) {
-			return fctx.SendStatus(fiber.StatusNetworkAuthenticationRequired)
-		}
-
-		return nil
-
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error in loading .env file")
 	}
+
+	jwtSecret := os.Getenv("JWT_SECRET_KEY")
+
+	return jwtware.New(jwtware.Config{
+		SigningKey: []byte(jwtSecret),
+		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
+			return ctx.Status(fiber.StatusNetworkAuthenticationRequired).JSON(fiber.Map{
+				"error": "Unauthorized",
+			})
+		},
+	})
 }

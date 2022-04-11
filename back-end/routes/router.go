@@ -2,13 +2,15 @@ package routes
 
 import (
 	"github.com/NicolasSales0101/ultiVidros-project/back-end/controllers"
+	"github.com/NicolasSales0101/ultiVidros-project/back-end/server/middlewares"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 func ConfigRoutes(router *fiber.App) *fiber.App {
 
 	// General main routes
-	main := router.Group("/api/v1")
+	main := router.Group("/api/v1", logger.New())
 	main.Post("/login", controllers.Login)
 
 	// General glasses routes
@@ -17,7 +19,7 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 	glasses.Get("/", controllers.ShowGlasses)
 	glasses.Post("/", controllers.CreateGlass)
 	glasses.Put("/", controllers.UpdateGlass)
-	glasses.Delete("/delete-glass/:id", controllers.DeleteGlass)
+	glasses.Delete("/delete-glass/:id", middlewares.AuthRequired(), controllers.DeleteGlass)
 
 	// Common glasses routes
 	commonGlss := glasses.Group("/common")
@@ -31,7 +33,7 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 
 	// General users routes
 	users := main.Group("/users")
-	users.Get("/", controllers.CreateUser)
+	users.Post("/", controllers.CreateUser)
 
 	return router
 }
