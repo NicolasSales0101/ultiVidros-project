@@ -23,7 +23,7 @@ func Login(fctx *fiber.Ctx) error {
 
 	var user models.User
 
-	dbError := db.Where("email = ?", user.Email).First(&user).Error
+	dbError := db.Where("email = ?", login.Email).First(&user).Error
 	if dbError != nil {
 		log.Println("Error in method Login:", dbError)
 		return fctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -31,7 +31,7 @@ func Login(fctx *fiber.Ctx) error {
 		})
 	}
 
-	if user.Password != services.SHA256Encoder(user.Password) {
+	if user.Password != services.SHA256Encoder(login.Password) {
 		log.Println("Error in verify credentials")
 		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "invalid credentials",
