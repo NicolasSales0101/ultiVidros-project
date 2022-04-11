@@ -2,9 +2,12 @@ package services
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/joho/godotenv"
 )
 
 type jwtService struct {
@@ -13,9 +16,18 @@ type jwtService struct {
 }
 
 func NewJWTService() *jwtService {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error in loading .env file")
+	}
+
+	jwtSecret := os.Getenv("JWT_SECRET_KEY")
+	jwtIssure := os.Getenv("JWT_ISSURE")
+
 	return &jwtService{
-		secretKey: "secret-key",
-		issure:    "ultividros-api",
+		secretKey: jwtSecret,
+		issure:    jwtIssure,
 	}
 }
 
