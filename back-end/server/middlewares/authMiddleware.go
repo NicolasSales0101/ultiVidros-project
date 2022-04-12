@@ -27,3 +27,37 @@ func AuthRequired() func(fctx *fiber.Ctx) error {
 		},
 	})
 }
+
+func AdminAuthRequired() fiber.Handler {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error in loading .env file")
+	}
+
+	adminLevel := os.Getenv("ADMIN_LEVEL")
+	adminPass := os.Getenv("ADMIN_PASSWORD")
+
+	return func(fctx *fiber.Ctx) error {
+		headers := fctx.GetReqHeaders()
+		for i, v := range headers {
+			if i == "AdminAuthLevel" {
+				if v != adminLevel {
+					return fctx.Status(fiber.StatusNetworkAuthenticationRequired).JSON(fiber.Map{
+						"error": "Unauthorized",
+					})
+				}
+			}
+
+			if i == "AdminAuthPass" {
+				if v != adminPass {
+					return fctx.Status(fiber.StatusNetworkAuthenticationRequired).JSON(fiber.Map{
+						"error": "Unathorized",
+					})
+				}
+			}
+		}
+
+		return fctx.Next()
+	}
+}
