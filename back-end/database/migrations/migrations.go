@@ -7,4 +7,5 @@ import (
 
 func RunMigrations(db *gorm.DB) {
 	db.AutoMigrate(models.Glass{})
+	db.AutoMigrate(models.User{})
 }
