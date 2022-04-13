@@ -19,6 +19,7 @@ type Glass struct {
 	Category        string         `json:"category"`
 	Type            string         `json:"type"`
 	GlassSheets     int            `json:"glass_sheets"`
+	Quantity        int            `json:"quantity"`
 	CreatedAt       time.Time      `json:"created"`
 	UpdatedAt       time.Time      `json:"updated"`
 	DeletedAt       gorm.DeletedAt `json:"deleted" gorm:"index"`
