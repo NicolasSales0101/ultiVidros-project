@@ -13,6 +13,8 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 	main := router.Group("/api/v1", logger.New())
 	main.Post("/login", controllers.Login)
 
+	// --------------------------------------------------------------------------------------------
+
 	// General glasses routes
 	glasses := main.Group("/glasses")
 	glasses.Get("/single-glass/:id", controllers.ShowGlass)
@@ -29,11 +31,21 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 	temperedGlss := glasses.Group("/tempered")
 	temperedGlss.Get("/", controllers.ShowTemperedGlasses)
 
-	// ---------------------------------------------------------
+	// --------------------------------------------------------------------------------------------
 
 	// General users routes
 	users := main.Group("/users")
 	users.Post("/", controllers.CreateUser)
+
+	// --------------------------------------------------------------------------------------------
+
+	// General request and sales routes
+	sales := main.Group("/sales")
+	sales.Get("/single-sale/:id", controllers.ShowSale)
+	sales.Get("/", controllers.ShowSales)
+	sales.Post("/", controllers.CreateSale)
+	sales.Put("/", controllers.UpdateSale)
+	sales.Delete("/delete-sale/:id", controllers.DeleteSale)
 
 	return router
 }
