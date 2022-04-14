@@ -9,12 +9,30 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+type Result struct {
+	SaleId       string  `json:"id"`
+	ClientId     string  `json:"client_id"`
+	ChatId       string  `json:"chat_id"`
+	TbProductsId string  `json:"products_id"`
+	ProductId    string  `json:"product_id"`
+	ProductPrice float64 `json:"product_price"`
+	ProductQty   int     `json:"product_quantity"`
+	CodeSupport  string  `json:"code_support"`
+}
+
+type Test struct {
+	Id string `json:"tb_products_id"`
+}
+
 func ShowSales(fctx *fiber.Ctx) error {
 	db := database.GetDatabase()
 
-	var sales []models.Sale
+	var result []Result
+	var test []Test
 
-	err := db.Find(&sales).Error
+	err := db.Raw("SELECT sales.id, sales.client_id, sales.chat_id, products.id, products.product_id, products.product_price, products.product_qty, products.sale_id FROM sales LEFT JOIN products ON products.sale_id = sales.id WHERE sales.deleted_at IS NULL").Scan(&result).Error
+	db.Raw("SELECT products.id FROM products LEFT JOIN sales ON products.sale_id = sales.id WHERE products.sale_id = sales.id").Scan(&test)
+	log.Println(test)
 	if err != nil {
 		log.Println("Error in method Get ShowSales:", err)
 		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -22,7 +40,7 @@ func ShowSales(fctx *fiber.Ctx) error {
 		})
 	}
 
-	return fctx.Status(fiber.StatusOK).JSON(sales)
+	return fctx.Status(fiber.StatusOK).JSON(result)
 }
 
 func ShowSale(fctx *fiber.Ctx) error {
