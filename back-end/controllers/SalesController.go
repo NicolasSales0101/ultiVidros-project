@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/NicolasSales0101/ultiVidros-project/back-end/database"
+	"github.com/NicolasSales0101/ultiVidros-project/back-end/database/dbUtils"
 	"github.com/NicolasSales0101/ultiVidros-project/back-end/models"
 	"github.com/gofiber/fiber/v2"
 )
@@ -52,12 +53,32 @@ func CreateSale(fctx *fiber.Ctx) error {
 		})
 	}
 
+	for _, v := range sale.Products {
+
+		err, productQty := dbUtils.GetTotalProductQty(v.ProductID)
+		if err != nil {
+			log.Println("Error in method Post CreateSale:", err)
+			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "internal server error: " + err.Error(),
+			})
+		}
+
+		if v.ProductQty > productQty {
+			log.Println(v.ProductQty, productQty)
+			return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+				"error": "Product quantity in request is big than quantity in stock",
+				"data":  sale,
+			})
+		}
+	}
+
 	db := database.GetDatabase()
 	err := db.Create(&sale).Error
 	if err != nil {
 		log.Println("Error in method Post CreateSale:", err)
 		return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
 			"error": "cannot create sale: " + err.Error(),
+			"data":  sale,
 		})
 	}
 
@@ -72,6 +93,24 @@ func UpdateSale(fctx *fiber.Ctx) error {
 		return fctx.Status(fiber.StatusNotModified).JSON(fiber.Map{
 			"error": "cannot update sale: " + err.Error(),
 		})
+	}
+
+	for _, v := range sale.Products {
+
+		err, productQty := dbUtils.GetTotalProductQty(v.ProductID)
+		if err != nil {
+			log.Println("Error in method Put UpdateSale:", err)
+			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "internal server error: " + err.Error(),
+			})
+		}
+
+		if v.ProductQty > productQty {
+			return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+				"error": "Product quantity in request is big than quantity in stock",
+				"data":  sale,
+			})
+		}
 	}
 
 	db := database.GetDatabase()

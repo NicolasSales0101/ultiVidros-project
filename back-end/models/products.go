@@ -13,7 +13,7 @@ type Product struct {
 	ProductID    string         `json:"product_id"`
 	ProductPrice float64        `json:"product_price"`
 	ProductQty   int            `json:"product_quantity"`
-	SaleID       string         `json:"sale_id"`
+	SaleID       string         `json:"sale_id" gorm:"size:191"`
 	CreatedAt    time.Time      `json:"created"`
 	UpdatedAt    time.Time      `json:"updated"`
 	DeletedAt    gorm.DeletedAt `json:"deleted" gorm:"index"`
