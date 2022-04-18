@@ -40,7 +40,7 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 	// --------------------------------------------------------------------------------------------
 
 	// General request and sales routes
-	sales := main.Group("/sales")
+	sales := main.Group("/sales", middlewares.AuthRequired())
 	sales.Get("/single-sale/:id", controllers.ShowSale)
 	sales.Get("/", controllers.ShowSales)
 	sales.Post("/", controllers.CreateSale)
@@ -53,9 +53,9 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 	parts := main.Group("/parts")
 	parts.Get("/single-part/:id", controllers.ShowPart)
 	parts.Get("/", controllers.ShowParts)
-	parts.Post("/", controllers.CreatePart)
-	parts.Put("/", controllers.UpdatePart)
-	parts.Delete("/delete-part/:id", controllers.DeletePart)
+	parts.Post("/", middlewares.AuthRequired(), middlewares.AdminAuthRequired(), controllers.CreatePart)
+	parts.Put("/", middlewares.AuthRequired(), middlewares.AdminAuthRequired(), controllers.UpdatePart)
+	parts.Delete("/delete-part/:id", middlewares.AuthRequired(), middlewares.AdminAuthRequired(), controllers.DeletePart)
 
 	return router
 }
