@@ -10,4 +10,5 @@ func RunMigrations(db *gorm.DB) {
 	db.AutoMigrate(models.User{})
 	db.AutoMigrate(models.Sale{})
 	db.AutoMigrate(models.SaleRequest{})
+	db.AutoMigrate(models.Part{})
 }
