@@ -13,6 +13,8 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 	main := router.Group("/api/v1", logger.New())
 	main.Post("/login", controllers.Login)
 
+	// --------------------------------------------------------------------------------------------
+
 	// General glasses routes
 	glasses := main.Group("/glasses")
 	glasses.Get("/single-glass/:id", controllers.ShowGlass)
@@ -29,11 +31,31 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 	temperedGlss := glasses.Group("/tempered")
 	temperedGlss.Get("/", controllers.ShowTemperedGlasses)
 
-	// ---------------------------------------------------------
+	// --------------------------------------------------------------------------------------------
 
 	// General users routes
 	users := main.Group("/users")
 	users.Post("/", controllers.CreateUser)
+
+	// --------------------------------------------------------------------------------------------
+
+	// General request and sales routes
+	sales := main.Group("/sales", middlewares.AuthRequired())
+	sales.Get("/single-sale/:id", controllers.ShowSale)
+	sales.Get("/", controllers.ShowSales)
+	sales.Post("/", controllers.CreateSale)
+	sales.Put("/", controllers.UpdateSale)
+	sales.Delete("/delete-sale/:id", controllers.DeleteSale)
+
+	// --------------------------------------------------------------------------------------------
+
+	// General parts routes
+	parts := main.Group("/parts")
+	parts.Get("/single-part/:id", controllers.ShowPart)
+	parts.Get("/", controllers.ShowParts)
+	parts.Post("/", middlewares.AuthRequired(), middlewares.AdminAuthRequired(), controllers.CreatePart)
+	parts.Put("/", middlewares.AuthRequired(), middlewares.AdminAuthRequired(), controllers.UpdatePart)
+	parts.Delete("/delete-part/:id", middlewares.AuthRequired(), middlewares.AdminAuthRequired(), controllers.DeletePart)
 
 	return router
 }
