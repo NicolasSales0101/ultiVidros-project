@@ -23,7 +23,6 @@ func ShowGlass(fctx *fiber.Ctx) error {
 		})
 	}
 
-	// Attention here
 	return fctx.Status(fiber.StatusOK).JSON(glass)
 }
 

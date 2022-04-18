@@ -11,7 +11,7 @@ import (
 
 type Result struct {
 	SaleData     models.Sale          `json:"sale_data"`
-	RequestSales []models.SaleRequest `json:"request_sales_data"`
+	SaleRequests []models.SaleRequest `json:"sale_requests_data"`
 }
 
 func ShowSales(fctx *fiber.Ctx) error {
@@ -22,8 +22,15 @@ func ShowSales(fctx *fiber.Ctx) error {
 	var salesRequests []models.SaleRequest
 
 	err := db.Find(&sales).Error
-	anotherErr := db.Find(&salesRequests).Error
-	if err != nil || anotherErr != nil {
+	if err != nil {
+		log.Println("Error in method Get ShowSales:", err)
+		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "cannot list sales: " + err.Error(),
+		})
+	}
+
+	err = db.Find(&salesRequests).Error
+	if err != nil {
 		log.Println("Error in method Get ShowSales:", err)
 		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "cannot list sales: " + err.Error(),
@@ -36,7 +43,7 @@ func ShowSales(fctx *fiber.Ctx) error {
 		for _, value := range salesRequests {
 			if v.ID == value.SaleID {
 				result[i].SaleData = v
-				result[i].RequestSales = append(result[i].RequestSales, value)
+				result[i].SaleRequests = append(result[i].SaleRequests, value)
 			}
 		}
 	}
@@ -54,11 +61,18 @@ func ShowSale(fctx *fiber.Ctx) error {
 	var saleRequests []models.SaleRequest
 
 	err := db.First(&sale, "id = ?", id).Error
-	anotherErr := db.Find(&saleRequests, "sale_id = ?", sale.ID).Error
-	if err != nil || anotherErr != nil {
-		log.Println("Error in method Get ShowSale (specific id in url params):", err, anotherErr)
+	if err != nil {
+		log.Println("Error in method Get ShowSale (specific id in url params):", err)
 		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "cannot find sale: " + err.Error() + " - " + anotherErr.Error(),
+			"error": "cannot find sale: " + err.Error(),
+		})
+	}
+
+	err = db.Find(&saleRequests, "sale_id = ?", sale.ID).Error
+	if err != nil {
+		log.Println("Error in method Get ShowSale (specific id in url params):", err)
+		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "cannot find sale: " + err.Error(),
 		})
 	}
 
@@ -66,7 +80,7 @@ func ShowSale(fctx *fiber.Ctx) error {
 
 	for _, value := range saleRequests {
 		result.SaleData = sale
-		result.RequestSales = append(result.RequestSales, value)
+		result.SaleRequests = append(result.SaleRequests, value)
 	}
 
 	return fctx.Status(fiber.StatusOK).JSON(result)
@@ -100,9 +114,26 @@ func CreateSale(fctx *fiber.Ctx) error {
 				"data":  sale,
 			})
 		}
+
+		err, areaAvailable := dbUtils.GetWidthAndHeightAvailableOfProduct(v.ProductID)
+		if err != nil {
+			log.Println("Error in method Put UpdateSale:", err)
+			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "internal server error: " + err.Error(),
+			})
+		}
+
+		if v.RequestWidth > areaAvailable["width"] || v.RequestHeight > areaAvailable["height"] {
+			return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+				"error": "Product width or height is big than width and height avalible in stock",
+				"data":  sale,
+			})
+		}
+
 	}
 
 	db := database.GetDatabase()
+
 	err := db.Create(&sale).Error
 	if err != nil {
 		log.Println("Error in method Post CreateSale:", err)
@@ -122,17 +153,27 @@ func UpdateSale(fctx *fiber.Ctx) error {
 	if err := fctx.BodyParser(&result); err != nil {
 		log.Println("Error in method Put UpdateSale:", err)
 		return fctx.Status(fiber.StatusNotModified).JSON(fiber.Map{
-			"error": "cannot update sale: " + err.Error(),
+			"error": "cannot bind sale: " + err.Error(),
+			"data":  result,
 		})
 	}
 
-	for _, v := range result.RequestSales {
+	for _, v := range result.SaleRequests {
+
+		if v.ID == "" || v.SaleID == "" {
+			log.Println("Error in method Put UpdateSale: empty JSON in body")
+			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "internal server error: empty JSON in body",
+				"data":  result,
+			})
+		}
 
 		err, productQty := dbUtils.GetTotalProductQty(v.ProductID)
 		if err != nil {
 			log.Println("Error in method Put UpdateSale:", err)
 			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "internal server error: " + err.Error(),
+				"data":  result,
 			})
 		}
 
@@ -144,11 +185,11 @@ func UpdateSale(fctx *fiber.Ctx) error {
 		}
 
 		err, areaAvailable := dbUtils.GetWidthAndHeightAvailableOfProduct(v.ProductID)
-		log.Println(areaAvailable["height"])
 		if err != nil {
 			log.Println("Error in method Put UpdateSale:", err)
 			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "internal server error: " + err.Error(),
+				"data":  result,
 			})
 		}
 
@@ -168,15 +209,20 @@ func UpdateSale(fctx *fiber.Ctx) error {
 		log.Println("Error in method Put UpdateSale:", err)
 		return fctx.Status(fiber.StatusNotModified).JSON(fiber.Map{
 			"error": "cannot update sale: " + err.Error(),
+			"data":  result,
 		})
 	}
 
-	for _, v := range result.RequestSales {
-		anotherErr := db.Omit("CreatedAt").Save(&v).Error
-		if anotherErr != nil {
-			log.Println("Error in method Put UpdateSale:", anotherErr)
+	for _, v := range result.SaleRequests {
+
+		log.Println(v)
+
+		err := db.Omit("CreatedAt").Save(&v).Error
+		if err != nil {
+			log.Println("Error in method Put UpdateSale:", err)
 			return fctx.Status(fiber.StatusNotModified).JSON(fiber.Map{
-				"error": "cannot update sale: " + anotherErr.Error(),
+				"error": "cannot update sale: " + err.Error(),
+				"data":  result,
 			})
 		}
 

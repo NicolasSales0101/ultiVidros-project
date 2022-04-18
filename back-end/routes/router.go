@@ -47,5 +47,15 @@ func ConfigRoutes(router *fiber.App) *fiber.App {
 	sales.Put("/", controllers.UpdateSale)
 	sales.Delete("/delete-sale/:id", controllers.DeleteSale)
 
+	// --------------------------------------------------------------------------------------------
+
+	// General parts routes
+	parts := main.Group("/parts")
+	parts.Get("/single-part/:id", controllers.ShowPart)
+	parts.Get("/", controllers.ShowParts)
+	parts.Post("/", controllers.CreatePart)
+	parts.Put("/", controllers.UpdatePart)
+	parts.Delete("/delete-part/:id", controllers.DeletePart)
+
 	return router
 }
