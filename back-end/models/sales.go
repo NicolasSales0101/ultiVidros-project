@@ -9,10 +9,10 @@ import (
 )
 
 type Sale struct {
-	ID        string         `json:"id" gorm:"primary_key"`
-	ClientID  string         `json:"client_id"`
-	ChatID    string         `json:"chat_id"`
-	Products  []Product      `json:"products"` // gorm:"foreignKey:SaleID;references:ID"
+	ID        string `json:"id" gorm:"primary_key"`
+	ClientID  string `json:"client_id"`
+	ChatID    string `json:"chat_id"`
+	Requests  []SaleRequest
 	CreatedAt time.Time      `json:"created"`
 	UpdatedAt time.Time      `json:"updated"`
 	DeletedAt gorm.DeletedAt `json:"deleted" gorm:"index"`

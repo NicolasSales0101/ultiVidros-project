@@ -9,5 +9,5 @@ func RunMigrations(db *gorm.DB) {
 	db.AutoMigrate(models.Glass{})
 	db.AutoMigrate(models.User{})
 	db.AutoMigrate(models.Sale{})
-	db.AutoMigrate(models.Product{})
+	db.AutoMigrate(models.SaleRequest{})
 }
