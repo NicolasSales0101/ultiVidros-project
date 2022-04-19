@@ -86,6 +86,8 @@ func ShowSale(fctx *fiber.Ctx) error {
 	return fctx.Status(fiber.StatusOK).JSON(result)
 }
 
+// Continue here
+
 func CreateSale(fctx *fiber.Ctx) error {
 
 	var sale models.Sale
@@ -97,9 +99,11 @@ func CreateSale(fctx *fiber.Ctx) error {
 		})
 	}
 
+	db := database.GetDatabase()
+
 	for _, v := range sale.Requests {
 
-		err, productQty := dbUtils.GetTotalProductQty(v.ProductID)
+		err, productQty := dbUtils.GetTotalProductQty(v, db)
 		if err != nil {
 			log.Println("Error in method Post CreateSale:", err)
 			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -131,8 +135,6 @@ func CreateSale(fctx *fiber.Ctx) error {
 		}
 
 	}
-
-	db := database.GetDatabase()
 
 	err := db.Create(&sale).Error
 	if err != nil {
