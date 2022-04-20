@@ -7,6 +7,7 @@ import (
 	"github.com/NicolasSales0101/ultiVidros-project/back-end/database/dbUtils"
 	"github.com/NicolasSales0101/ultiVidros-project/back-end/models"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 type Result struct {
@@ -86,7 +87,7 @@ func ShowSale(fctx *fiber.Ctx) error {
 	return fctx.Status(fiber.StatusOK).JSON(result)
 }
 
-// Continue here
+// need tests
 
 func CreateSale(fctx *fiber.Ctx) error {
 
@@ -103,35 +104,58 @@ func CreateSale(fctx *fiber.Ctx) error {
 
 	for _, v := range sale.Requests {
 
-		err, productQty := dbUtils.GetTotalProductQty(v, db)
-		if err != nil {
-			log.Println("Error in method Post CreateSale:", err)
-			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "internal server error: " + err.Error(),
-			})
-		}
+		switch t := v.Product.(type) {
 
-		if v.ProductQty > productQty {
-			log.Println(v.ProductQty, productQty)
-			return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
-				"error": "Product quantity in request is big than quantity in stock",
-				"data":  sale,
-			})
-		}
+		case *models.Glass:
 
-		err, areaAvailable := dbUtils.GetWidthAndHeightAvailableOfProduct(v.ProductID)
-		if err != nil {
-			log.Println("Error in method Put UpdateSale:", err)
-			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "internal server error: " + err.Error(),
-			})
-		}
+			err, productQty := dbUtils.GetTotalProductQty(v.Product, db)
+			if err != nil {
+				log.Println("Error in method Post CreateSale:", err)
+				return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": "internal server error: " + err.Error(),
+				})
+			}
 
-		if v.RequestWidth > areaAvailable["width"] || v.RequestHeight > areaAvailable["height"] {
-			return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
-				"error": "Product width or height is big than width and height avalible in stock",
-				"data":  sale,
-			})
+			if v.ProductQty > productQty {
+				log.Println(v.ProductQty, productQty)
+				return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+					"error": "Product quantity in request is big than quantity in stock",
+					"data":  sale,
+				})
+			}
+
+			err, areaAvailable := t.GetWidthAndHeightAvailableOfProduct(t.ID, db)
+			if err != nil {
+				log.Println("Error in method Put UpdateSale:", err)
+				return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": "internal server error: " + err.Error(),
+				})
+			}
+
+			if v.RequestWidth > areaAvailable["width"] || v.RequestHeight > areaAvailable["height"] {
+				return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+					"error": "Product width or height is big than width and height avalible in stock",
+					"data":  sale,
+				})
+			}
+
+		case *models.Part:
+			err, productQty := dbUtils.GetTotalProductQty(v.Product, db)
+			if err != nil {
+				log.Println("Error in method Post CreateSale:", err)
+				return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": "internal server error: " + err.Error(),
+				})
+			}
+
+			if v.ProductQty > productQty {
+				log.Println(v.ProductQty, productQty)
+				return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+					"error": "Product quantity in request is big than quantity in stock",
+					"data":  sale,
+				})
+			}
+
 		}
 
 	}
@@ -150,7 +174,10 @@ func CreateSale(fctx *fiber.Ctx) error {
 
 func UpdateSale(fctx *fiber.Ctx) error {
 
-	var result Result
+	var (
+		result Result
+		db     *gorm.DB = database.GetDatabase()
+	)
 
 	if err := fctx.BodyParser(&result); err != nil {
 		log.Println("Error in method Put UpdateSale:", err)
@@ -170,41 +197,61 @@ func UpdateSale(fctx *fiber.Ctx) error {
 			})
 		}
 
-		err, productQty := dbUtils.GetTotalProductQty(v.ProductID)
-		if err != nil {
-			log.Println("Error in method Put UpdateSale:", err)
-			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "internal server error: " + err.Error(),
-				"data":  result,
-			})
-		}
+		switch t := v.Product.(type) {
 
-		if v.ProductQty > productQty {
-			return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
-				"error": "Product quantity in request is big than quantity in stock",
-				"data":  result,
-			})
-		}
+		case *models.Glass:
 
-		err, areaAvailable := dbUtils.GetWidthAndHeightAvailableOfProduct(v.ProductID)
-		if err != nil {
-			log.Println("Error in method Put UpdateSale:", err)
-			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "internal server error: " + err.Error(),
-				"data":  result,
-			})
-		}
+			err, productQty := dbUtils.GetTotalProductQty(v.Product, db)
+			if err != nil {
+				log.Println("Error in method Put UpdateSale:", err)
+				return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": "internal server error: " + err.Error(),
+					"data":  result,
+				})
+			}
 
-		if v.RequestWidth > areaAvailable["width"] || v.RequestHeight > areaAvailable["height"] {
-			return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
-				"error": "Product width or height is big than width and height avalible in stock",
-				"data":  result,
-			})
-		}
+			if v.ProductQty > productQty {
+				return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+					"error": "Product quantity in request is big than quantity in stock",
+					"data":  result,
+				})
+			}
 
+			err, areaAvailable := t.GetWidthAndHeightAvailableOfProduct(t.ID, db)
+			if err != nil {
+				log.Println("Error in method Put UpdateSale:", err)
+				return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": "internal server error: " + err.Error(),
+					"data":  result,
+				})
+			}
+
+			if v.RequestWidth > areaAvailable["width"] || v.RequestHeight > areaAvailable["height"] {
+				return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+					"error": "Product width or height is big than width and height avalible in stock",
+					"data":  result,
+				})
+			}
+
+		case *models.Part:
+
+			err, productQty := dbUtils.GetTotalProductQty(v.Product, db)
+			if err != nil {
+				log.Println("Error in method Put UpdateSale:", err)
+				return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": "internal server error: " + err.Error(),
+					"data":  result,
+				})
+			}
+
+			if v.ProductQty > productQty {
+				return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+					"error": "Product quantity in request is big than quantity in stock",
+					"data":  result,
+				})
+			}
+		}
 	}
-
-	db := database.GetDatabase()
 
 	err := db.Omit("CreatedAt").Save(&result.SaleData).Error
 	if err != nil {
