@@ -20,7 +20,7 @@ type SaleRequest struct {
 	ProductQty    int                 `json:"product_quantity"`
 	RequestHeight float64             `json:"request_height"`
 	RequestWidth  float64             `json:"request_width"`
-	Product       interfaces.Products `json:"product_data" gorm:"embedded;embeddedPrefix:product_"`
+	Product       interfaces.Products `json:"-" gorm:"-:all"`
 	SaleID        string              `json:"sale_id" gorm:"size:191"`
 	CreatedAt     time.Time           `json:"created"`
 	UpdatedAt     time.Time           `json:"updated"`
