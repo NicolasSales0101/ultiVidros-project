@@ -64,6 +64,27 @@ func (g *Glass) GetWidthAndHeightAvailableOfProduct(id string, db *gorm.DB) (err
 	}
 }
 
+func (g *Glass) ReduceArea(id string, width, height float64, db *gorm.DB) error {
+	var p queryUtils.ProductArea
+
+	err := db.Model(g).Where("id = ?", id).Find(&p).Error
+	if err != nil {
+		return nil
+	}
+
+	if p.WidthAvailable < width || p.HeightAvailable < height {
+		return fmt.Errorf("width or height is large than in stock")
+	}
+
+	err = db.Model(g).Where("id = ?", id).Updates(map[string]interface{}{"width_available": width, "height_available": height}).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
 func (g *Glass) IncreaseQty(id string, qty int, db *gorm.DB) error {
 
 	if qty < 0 {
