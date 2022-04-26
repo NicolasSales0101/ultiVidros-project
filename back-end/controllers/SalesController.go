@@ -87,7 +87,7 @@ func ShowSale(fctx *fiber.Ctx) error {
 	return fctx.Status(fiber.StatusOK).JSON(result)
 }
 
-// need tests
+// TODO: test CreateSale and UpdateSale
 
 func CreateSale(fctx *fiber.Ctx) error {
 
@@ -139,6 +139,16 @@ func CreateSale(fctx *fiber.Ctx) error {
 				})
 			}
 
+			err = dbUtils.DecreaseQty(t, v.ProductQty, db)
+			if err != nil {
+				return err
+			}
+
+			err = t.ReduceArea(t.ID, v.RequestWidth, v.RequestHeight, db)
+			if err != nil {
+				return err
+			}
+
 		case *models.Part:
 			err, productQty := dbUtils.GetTotalProductQty(v.Product, db)
 			if err != nil {
@@ -154,6 +164,11 @@ func CreateSale(fctx *fiber.Ctx) error {
 					"error": "Product quantity in request is big than quantity in stock",
 					"data":  sale,
 				})
+			}
+
+			err = dbUtils.DecreaseQty(t, v.ProductQty, db)
+			if err != nil {
+				return err
 			}
 
 		}
@@ -233,6 +248,16 @@ func UpdateSale(fctx *fiber.Ctx) error {
 				})
 			}
 
+			err = dbUtils.DecreaseQty(t, v.ProductQty, db)
+			if err != nil {
+				return err
+			}
+
+			err = t.ReduceArea(t.ID, v.RequestWidth, v.RequestHeight, db)
+			if err != nil {
+				return err
+			}
+
 		case *models.Part:
 
 			err, productQty := dbUtils.GetTotalProductQty(v.Product, db)
@@ -250,6 +275,12 @@ func UpdateSale(fctx *fiber.Ctx) error {
 					"data":  result,
 				})
 			}
+
+			err = dbUtils.DecreaseQty(t, v.ProductQty, db)
+			if err != nil {
+				return err
+			}
+
 		}
 	}
 
