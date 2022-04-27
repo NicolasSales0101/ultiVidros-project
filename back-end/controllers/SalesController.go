@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
+	"reflect"
 
 	"github.com/NicolasSales0101/ultiVidros-project/back-end/database"
 	"github.com/NicolasSales0101/ultiVidros-project/back-end/database/dbUtils"
@@ -11,16 +13,20 @@ import (
 )
 
 type Result struct {
-	SaleData     models.Sale          `json:"sale_data"`
-	SaleRequests []models.SaleRequest `json:"sale_requests_data"`
+	SaleData          models.Sale               `json:"sale_data"`
+	SaleGlassRequests []models.SaleGlassRequest `json:"sale_glass_requests_data"`
+	SalePartRequests  []models.SalePartRequest  `json:"sale_part_requests_data"`
 }
+
+// TODO: test everything
 
 func ShowSales(fctx *fiber.Ctx) error {
 
 	db := database.GetDatabase()
 
 	var sales []models.Sale
-	var salesRequests []models.SaleRequest
+	var salesGlassesRequests []models.SaleGlassRequest
+	var salesPartsRequests []models.SalePartRequest
 
 	err := db.Find(&sales).Error
 	if err != nil {
@@ -30,23 +36,39 @@ func ShowSales(fctx *fiber.Ctx) error {
 		})
 	}
 
-	err = db.Find(&salesRequests).Error
+	err = db.Find(&salesGlassesRequests).Error
 	if err != nil {
 		log.Println("Error in method Get ShowSales:", err)
 		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "cannot list sales: " + err.Error(),
+			"error": "cannot list sales (glasses requests): " + err.Error(),
+		})
+	}
+
+	err = db.Find(&salesPartsRequests).Error
+	if err != nil {
+		log.Println("Error in method Get ShowSales:", err)
+		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "cannot list sales (parts requests): " + err.Error(),
 		})
 	}
 
 	var result = make([]Result, len(sales))
 
 	for i, v := range sales {
-		for _, value := range salesRequests {
+		for _, value := range salesGlassesRequests {
 			if v.ID == value.SaleID {
 				result[i].SaleData = v
-				result[i].SaleRequests = append(result[i].SaleRequests, value)
+				result[i].SaleGlassRequests = append(result[i].SaleGlassRequests, value)
 			}
 		}
+
+		for _, value := range salesPartsRequests {
+			if v.ID == value.SaleID {
+				// result[i].SaleData = v
+				result[i].SalePartRequests = append(result[i].SalePartRequests, value)
+			}
+		}
+
 	}
 
 	return fctx.Status(fiber.StatusOK).JSON(result)
@@ -59,7 +81,8 @@ func ShowSale(fctx *fiber.Ctx) error {
 	db := database.GetDatabase()
 
 	var sale models.Sale
-	var saleRequests []models.SaleRequest
+	var salesGlassesRequests []models.SaleGlassRequest
+	var salesPartsRequests []models.SalePartRequest
 
 	err := db.First(&sale, "id = ?", id).Error
 	if err != nil {
@@ -69,19 +92,32 @@ func ShowSale(fctx *fiber.Ctx) error {
 		})
 	}
 
-	err = db.Find(&saleRequests, "sale_id = ?", sale.ID).Error
+	err = db.Find(&salesGlassesRequests, "sale_id = ?", sale.ID).Error
 	if err != nil {
 		log.Println("Error in method Get ShowSale (specific id in url params):", err)
 		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "cannot find sale: " + err.Error(),
+			"error": "cannot find sale (glasses requests): " + err.Error(),
+		})
+	}
+
+	err = db.Find(&salesPartsRequests, "sale_id = ?", sale.ID).Error
+	if err != nil {
+		log.Println("Error in method Get ShowSale (specific id in url params):", err)
+		return fctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "cannot find sale (parts requests): " + err.Error(),
 		})
 	}
 
 	var result Result
 
-	for _, value := range saleRequests {
+	for _, value := range salesGlassesRequests {
 		result.SaleData = sale
-		result.SaleRequests = append(result.SaleRequests, value)
+		result.SaleGlassRequests = append(result.SaleGlassRequests, value)
+	}
+
+	for _, value := range salesPartsRequests {
+		// result.SaleData = sale
+		result.SalePartRequests = append(result.SalePartRequests, value)
 	}
 
 	return fctx.Status(fiber.StatusOK).JSON(result)
@@ -102,75 +138,69 @@ func CreateSale(fctx *fiber.Ctx) error {
 
 	db := database.GetDatabase()
 
-	for _, v := range sale.Requests {
+	for _, v := range sale.GlassRequests {
 
-		switch t := v.Product.(type) {
+		err, productQty := v.GetTotalProductQty(v.GlassID, db)
+		if err != nil {
+			log.Println("Error in method Post CreateSale:", err)
+			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "internal server error: " + err.Error(),
+			})
+		}
 
-		case *models.Glass:
+		if v.GlassQty > productQty {
+			return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+				"error": "Glass quantity in request is big than quantity in stock",
+				"data":  sale,
+			})
+		}
 
-			err, productQty := dbUtils.GetTotalProductQty(v.Product, db)
-			if err != nil {
-				log.Println("Error in method Post CreateSale:", err)
-				return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "internal server error: " + err.Error(),
-				})
-			}
+		err, areaAvailable := v.GetWidthAndHeightAvailableOfProduct(v.ID, db)
+		if err != nil {
+			log.Println("Error in method Put UpdateSale:", err)
+			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "internal server error: " + err.Error(),
+			})
+		}
 
-			if v.ProductQty > productQty {
-				log.Println(v.ProductQty, productQty)
-				return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
-					"error": "Product quantity in request is big than quantity in stock",
-					"data":  sale,
-				})
-			}
+		if v.RequestWidth > areaAvailable["width"] || v.RequestHeight > areaAvailable["height"] {
+			return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+				"error": "Product width or height is big than width and height avalible in stock",
+				"data":  sale,
+			})
+		}
 
-			err, areaAvailable := t.GetWidthAndHeightAvailableOfProduct(t.ID, db)
-			if err != nil {
-				log.Println("Error in method Put UpdateSale:", err)
-				return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "internal server error: " + err.Error(),
-				})
-			}
+		err = v.DecreaseQty(v.GlassID, v.GlassQty, db)
+		if err != nil {
+			return err
+		}
 
-			if v.RequestWidth > areaAvailable["width"] || v.RequestHeight > areaAvailable["height"] {
-				return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
-					"error": "Product width or height is big than width and height avalible in stock",
-					"data":  sale,
-				})
-			}
+		err = v.ReduceArea(v.GlassID, v.RequestWidth, v.RequestHeight, db)
+		if err != nil {
+			return err
+		}
+	}
 
-			err = dbUtils.DecreaseQty(t, v.ProductQty, db)
-			if err != nil {
-				return err
-			}
+	for _, v := range sale.PartRequests {
 
-			err = t.ReduceArea(t.ID, v.RequestWidth, v.RequestHeight, db)
-			if err != nil {
-				return err
-			}
+		err, productQty := v.GetTotalProductQty(v.PartID, db)
+		if err != nil {
+			log.Println("Error in method Post CreateSale:", err)
+			return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "internal server error: " + err.Error(),
+			})
+		}
 
-		case *models.Part:
-			err, productQty := dbUtils.GetTotalProductQty(v.Product, db)
-			if err != nil {
-				log.Println("Error in method Post CreateSale:", err)
-				return fctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "internal server error: " + err.Error(),
-				})
-			}
+		if v.PartQty > productQty {
+			return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+				"error": "Part quantity in request is big than quantity in stock",
+				"data":  sale,
+			})
+		}
 
-			if v.ProductQty > productQty {
-				log.Println(v.ProductQty, productQty)
-				return fctx.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
-					"error": "Product quantity in request is big than quantity in stock",
-					"data":  sale,
-				})
-			}
-
-			err = dbUtils.DecreaseQty(t, v.ProductQty, db)
-			if err != nil {
-				return err
-			}
-
+		err = v.DecreaseQty(v.PartID, v.PartQty, db)
+		if err != nil {
+			return err
 		}
 
 	}
@@ -211,6 +241,8 @@ func UpdateSale(fctx *fiber.Ctx) error {
 				"data":  result,
 			})
 		}
+
+		fmt.Println("--->", reflect.TypeOf(v))
 
 		switch t := v.Product.(type) {
 
