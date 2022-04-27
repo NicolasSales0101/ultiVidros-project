@@ -15,9 +15,9 @@ var _ interfaces.Products = &SalePartRequest{}
 
 type SalePartRequest struct {
 	ID        string  `json:"id"`
-	PartID    string  `json:"glass_id"`
-	PartPrice float64 `json:"product_price"`
-	PartQty   int     `json:"glass_quantity"`
+	PartID    string  `json:"part_id"`
+	PartPrice float64 `json:"part_price"`
+	PartQty   int     `json:"part_quantity"`
 	//	Product       interfaces.Products `json:"-" gorm:"-:all"`
 	SaleID    string         `json:"sale_id" gorm:"size:191"`
 	CreatedAt time.Time      `json:"created"`
