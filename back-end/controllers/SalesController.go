@@ -15,8 +15,6 @@ type Result struct {
 	SalePartRequests  []models.SalePartRequest  `json:"sale_part_requests_data"`
 }
 
-// TODO: test everything
-
 func ShowSales(fctx *fiber.Ctx) error {
 
 	db := database.GetDatabase()
@@ -170,7 +168,7 @@ func CreateSale(fctx *fiber.Ctx) error {
 			return err
 		}
 
-		err = v.ReduceArea(v.GlassID, v.RequestWidth, v.RequestHeight, db)
+		err = v.DecreaseArea(v.GlassID, v.RequestWidth, v.RequestHeight, db)
 		if err != nil {
 			return err
 		}
@@ -274,7 +272,7 @@ func UpdateSale(fctx *fiber.Ctx) error {
 			return err
 		}
 
-		err = v.ReduceArea(v.GlassID, v.RequestWidth, v.RequestHeight, db)
+		err = v.DecreaseArea(v.GlassID, v.RequestWidth, v.RequestHeight, db)
 		if err != nil {
 			return err
 		}
