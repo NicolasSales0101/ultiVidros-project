@@ -49,6 +49,51 @@ func (g *Glass) GetTotalProductQty(id string, db *gorm.DB) (error, int) {
 	return nil, p.Quantity
 }
 
+func (g *Glass) IncreaseQty(id string, qty int, db *gorm.DB) error {
+
+	if qty < 0 {
+		return fmt.Errorf("negative stock error: quantity number should be positive")
+	}
+
+	var newQty int
+
+	newQty = g.Quantity + qty
+
+	if newQty < 0 {
+		return fmt.Errorf("negative stock error: quantity should be positive")
+	}
+
+	err := db.Model(g).Where("id = ?", id).Update("quantity", newQty).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func (g *Glass) DecreaseQty(id string, qty int, db *gorm.DB) error {
+
+	if qty < 0 {
+		return fmt.Errorf("negative stock error: quantity number should be positive")
+	}
+
+	var newQty int
+
+	newQty = g.Quantity - qty
+
+	if newQty < 0 {
+		return fmt.Errorf("negative stock error: quantity should be positive")
+	}
+
+	err := db.Model(g).Where("id = ?", id).Update("quantity", newQty).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (g *Glass) GetWidthAndHeightAvailableOfProduct(id string, db *gorm.DB) (error, map[string]float64) {
 
 	var p queryUtils.ProductArea
@@ -64,70 +109,55 @@ func (g *Glass) GetWidthAndHeightAvailableOfProduct(id string, db *gorm.DB) (err
 	}
 }
 
-func (g *Glass) ReduceArea(id string, width, height float64, db *gorm.DB) error {
-	var p queryUtils.ProductArea
+func (g *Glass) IncreaseArea(id string, width, height float64, db *gorm.DB) error {
 
-	err := db.Model(g).Where("id = ?", id).Find(&p).Error
-	if err != nil {
+	if g.Category == "tempered" {
 		return nil
 	}
 
-	if p.WidthAvailable < width || p.HeightAvailable < height {
+	if width < 0 || height < 0 {
+		return fmt.Errorf("width or height is negative")
+	}
+
+	var (
+		newWidth  float64
+		newHeight float64
+	)
+
+	newWidth = g.WidthAvailable + width
+	newHeight = g.HeightAvailable + height
+
+	err := db.Model(g).Where("id = ?", id).Updates(map[string]interface{}{"width_available": newWidth, "height_available": newHeight}).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *Glass) DecreaseArea(id string, width, height float64, db *gorm.DB) error {
+
+	if g.Category == "tempered" {
+		return nil
+	}
+
+	var (
+		newWidth  float64
+		newHeight float64
+	)
+
+	if g.WidthAvailable < width || g.HeightAvailable < height {
 		return fmt.Errorf("width or height is large than in stock")
 	}
 
-	err = db.Model(g).Where("id = ?", id).Updates(map[string]interface{}{"width_available": width, "height_available": height}).Error
-	if err != nil {
-		return err
+	newWidth = g.WidthAvailable - width
+	newHeight = g.HeightAvailable - height
+
+	if newWidth < 0 || newHeight < 0 {
+		return fmt.Errorf("negative stock error: width or height should be positive or zero")
 	}
 
-	return nil
-
-}
-
-func (g *Glass) IncreaseQty(id string, qty int, db *gorm.DB) error {
-
-	if qty < 0 {
-		return fmt.Errorf("negative stock error: quantity number should be positive")
-	}
-
-	var p queryUtils.ProductQty
-
-	err := db.Model(g).Where("id = ?", id).Find(&p).Error
-	if err != nil {
-		return err
-	}
-
-	newQty := p.Quantity + qty
-
-	if newQty < 0 {
-		return fmt.Errorf("negative stock error: quantity should be positive")
-	}
-
-	err = db.Model(g).Where("id = ?", id).Update("quantity", newQty).Error
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (g *Glass) DecreaseQty(id string, qty int, db *gorm.DB) error {
-
-	var p queryUtils.ProductQty
-
-	err := db.Model(g).Where("id = ?", id).Find(&p).Error
-	if err != nil {
-		return err
-	}
-
-	newQty := p.Quantity - qty
-
-	if newQty < 0 {
-		return fmt.Errorf("negative stock error: quantity in request is large than quantity in stock")
-	}
-
-	err = db.Model(g).Where("id = ?", id).Update("quantity", newQty).Error
+	err := db.Model(g).Where("id = ?", id).Updates(map[string]interface{}{"width_available": newWidth, "height_available": newHeight}).Error
 	if err != nil {
 		return err
 	}

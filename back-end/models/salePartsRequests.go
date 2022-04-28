@@ -14,11 +14,10 @@ import (
 var _ interfaces.Products = &SalePartRequest{}
 
 type SalePartRequest struct {
-	ID        string  `json:"id"`
-	PartID    string  `json:"part_id"`
-	PartPrice float64 `json:"part_price"`
-	PartQty   int     `json:"part_quantity"`
-	//	Product       interfaces.Products `json:"-" gorm:"-:all"`
+	ID        string         `json:"id"`
+	PartID    string         `json:"part_id"`
+	PartPrice float64        `json:"part_price"`
+	PartQty   int            `json:"part_quantity"`
 	SaleID    string         `json:"sale_id" gorm:"size:191"`
 	CreatedAt time.Time      `json:"created"`
 	UpdatedAt time.Time      `json:"updated"`
@@ -33,6 +32,22 @@ func (saleRequest *SalePartRequest) BeforeCreate(scope *gorm.DB) (err error) {
 	scope.Statement.SetColumn("ID", id)
 
 	return nil
+}
+
+func (saleReq *SalePartRequest) findIfExist(id string, db *gorm.DB) (error, bool) {
+
+	var p queryUtils.ProductId
+
+	err := db.Model(saleReq).Where("id = ?", id).Find(p).Error
+	if err != nil {
+		return err, false
+	}
+
+	if p.ID == "" {
+		return nil, false
+	}
+
+	return nil, true
 }
 
 func (saleReq *SalePartRequest) GetTotalProductQty(id string, db *gorm.DB) (error, int) {
@@ -54,14 +69,47 @@ func (saleReq *SalePartRequest) IncreaseQty(id string, qty int, db *gorm.DB) err
 		return fmt.Errorf("negative stock error: quantity number should be positive")
 	}
 
-	var p queryUtils.ProductQty
+	var (
+		p           queryUtils.ProductQty
+		increaseQty int
+		newQty      int
+	)
 
-	err := db.Model(&Part{}).Where("id = ?", id).Find(&p).Error
+	err, ver := saleReq.findIfExist(id, db)
 	if err != nil {
 		return err
 	}
 
-	newQty := p.Quantity + qty
+	if ver == true {
+
+		err := db.Model(&Part{}).Where("id = ?", id).Find(&p).Error
+		if err != nil {
+			return err
+		}
+
+		increaseQty = qty - saleReq.PartQty
+
+		newQty = p.Quantity + increaseQty
+
+		if newQty < 0 {
+			return fmt.Errorf("negative stock error: quantity should be positive")
+		}
+
+		err = db.Model(&Part{}).Where("id = ?", id).Update("quantity", newQty).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+
+	}
+
+	err = db.Model(&Part{}).Where("id = ?", id).Find(&p).Error
+	if err != nil {
+		return err
+	}
+
+	newQty = p.Quantity + qty
 
 	if newQty < 0 {
 		return fmt.Errorf("negative stock error: quantity should be positive")
@@ -81,14 +129,47 @@ func (saleReq *SalePartRequest) DecreaseQty(id string, qty int, db *gorm.DB) err
 		return fmt.Errorf("negative stock error: quantity number should be positive")
 	}
 
-	var p queryUtils.ProductQty
+	var (
+		p          queryUtils.ProductQty
+		requestQty int
+		newQty     int
+	)
 
-	err := db.Model(&Part{}).Where("id = ?", id).Find(&p).Error
+	err, ver := saleReq.findIfExist(id, db)
 	if err != nil {
 		return err
 	}
 
-	newQty := p.Quantity - qty
+	if ver == true {
+
+		err := db.Model(&Part{}).Where("id = ?", id).Find(&p).Error
+		if err != nil {
+			return err
+		}
+
+		requestQty = qty - saleReq.PartQty
+
+		newQty = p.Quantity - requestQty
+
+		if newQty < 0 {
+			return fmt.Errorf("negative stock error: quantity should be positive")
+		}
+
+		err = db.Model(&Part{}).Where("id = ?", id).Update("quantity", newQty).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+
+	}
+
+	err = db.Model(&Part{}).Where("id = ?", id).Find(&p).Error
+	if err != nil {
+		return err
+	}
+
+	newQty = p.Quantity - qty
 
 	if newQty < 0 {
 		return fmt.Errorf("negative stock error: quantity should be positive")

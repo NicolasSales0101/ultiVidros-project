@@ -51,43 +51,82 @@ func (part *Part) IncreaseQty(id string, qty int, db *gorm.DB) error {
 		return fmt.Errorf("negative stock error: quantity number should be positive")
 	}
 
-	var p queryUtils.ProductQty
+	var (
+		increaseQty int
+		newQty      int
+	)
 
-	err := db.Model(part).Where("id = ?", id).Find(&p).Error
-	if err != nil {
-		return err
+	if part.Quantity > 0 {
+
+		increaseQty = qty - part.Quantity
+
+		newQty = part.Quantity + increaseQty
+
+		if newQty < 0 {
+			return fmt.Errorf("negative stock error: quantity should be positive")
+		}
+
+		err := db.Model(part).Where("id = ?", id).Update("quantity", newQty).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+
 	}
 
-	newQty := p.Quantity + qty
+	newQty = part.Quantity + qty
 
 	if newQty < 0 {
 		return fmt.Errorf("negative stock error: quantity should be positive")
 	}
 
-	err = db.Model(part).Where("id = ?", id).Update("quantity", newQty).Error
+	err := db.Model(part).Where("id = ?", id).Update("quantity", newQty).Error
 	if err != nil {
 		return err
 	}
 
 	return nil
+
 }
 
 func (part *Part) DecreaseQty(id string, qty int, db *gorm.DB) error {
 
-	var p queryUtils.ProductQty
-
-	err := db.Model(part).Where("id = ?", id).Find(&p).Error
-	if err != nil {
-		return err
+	if qty < 0 {
+		return fmt.Errorf("negative stock error: quantity number should be positive")
 	}
 
-	newQty := p.Quantity - qty
+	var (
+		requestQty int
+		newQty     int
+	)
+
+	if part.Quantity > 0 {
+
+		requestQty = qty - part.Quantity
+
+		newQty = part.Quantity - requestQty
+
+		if newQty < 0 {
+			return fmt.Errorf("negative stock error: quantity should be positive")
+		}
+
+		err := db.Model(part).Where("id = ?", id).Update("quantity", newQty).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+
+	}
+
+	newQty = part.Quantity - qty
 
 	if newQty < 0 {
-		return fmt.Errorf("negative stock error: quantity in request is large than quantity in stock")
+		return fmt.Errorf("negative stock error: quantity should be positive")
 	}
 
-	err = db.Model(part).Where("id = ?", id).Update("quantity", newQty).Error
+	err := db.Model(part).Where("id = ?", id).Update("quantity", newQty).Error
 	if err != nil {
 		return err
 	}

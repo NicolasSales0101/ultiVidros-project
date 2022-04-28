@@ -14,17 +14,16 @@ import (
 var _ interfaces.Products = &SaleGlassRequest{}
 
 type SaleGlassRequest struct {
-	ID            string  `json:"id"`
-	GlassID       string  `json:"glass_id"`
-	GlassPrice    float64 `json:"glass_price"`
-	GlassQty      int     `json:"glass_quantity"`
-	RequestHeight float64 `json:"request_height"`
-	RequestWidth  float64 `json:"request_width"`
-	//	Product       interfaces.Products `json:"-" gorm:"-:all"`
-	SaleID    string         `json:"sale_id" gorm:"size:191"`
-	CreatedAt time.Time      `json:"created"`
-	UpdatedAt time.Time      `json:"updated"`
-	DeletedAt gorm.DeletedAt `json:"deleted" gorm:"index"`
+	ID            string         `json:"id"`
+	GlassID       string         `json:"glass_id"`
+	GlassPrice    float64        `json:"glass_price"`
+	GlassQty      int            `json:"glass_quantity"`
+	RequestHeight float64        `json:"request_height"`
+	RequestWidth  float64        `json:"request_width"`
+	SaleID        string         `json:"sale_id" gorm:"size:191"`
+	CreatedAt     time.Time      `json:"created"`
+	UpdatedAt     time.Time      `json:"updated"`
+	DeletedAt     gorm.DeletedAt `json:"deleted" gorm:"index"`
 }
 
 func (saleRequest *SaleGlassRequest) BeforeCreate(scope *gorm.DB) (err error) {
@@ -35,6 +34,22 @@ func (saleRequest *SaleGlassRequest) BeforeCreate(scope *gorm.DB) (err error) {
 	scope.Statement.SetColumn("ID", id)
 
 	return nil
+}
+
+func (saleReq *SaleGlassRequest) findIfExist(id string, db *gorm.DB) (error, bool) {
+
+	var p queryUtils.ProductId
+
+	err := db.Model(saleReq).Where("id = ?", id).Find(p).Error
+	if err != nil {
+		return err, false
+	}
+
+	if p.ID == "" {
+		return nil, false
+	}
+
+	return nil, true
 }
 
 func (saleReq *SaleGlassRequest) GetTotalProductQty(id string, db *gorm.DB) (error, int) {
@@ -56,14 +71,47 @@ func (saleReq *SaleGlassRequest) IncreaseQty(id string, qty int, db *gorm.DB) er
 		return fmt.Errorf("negative stock error: quantity number should be positive")
 	}
 
-	var p queryUtils.ProductQty
+	var (
+		p           queryUtils.ProductQty
+		increaseQty int
+		newQty      int
+	)
 
-	err := db.Model(&Glass{}).Where("id = ?", id).Find(&p).Error
+	err, ver := saleReq.findIfExist(id, db)
 	if err != nil {
 		return err
 	}
 
-	newQty := p.Quantity + qty
+	if ver == true {
+
+		err := db.Model(&Glass{}).Where("id = ?", id).Find(&p).Error
+		if err != nil {
+			return err
+		}
+
+		increaseQty = qty - saleReq.GlassQty
+
+		newQty = p.Quantity + increaseQty
+
+		if newQty < 0 {
+			return fmt.Errorf("negative stock error: quantity should be positive")
+		}
+
+		err = db.Model(&Glass{}).Where("id = ?", id).Update("quantity", newQty).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+
+	}
+
+	err = db.Model(&Glass{}).Where("id = ?", id).Find(&p).Error
+	if err != nil {
+		return err
+	}
+
+	newQty = p.Quantity + qty
 
 	if newQty < 0 {
 		return fmt.Errorf("negative stock error: quantity should be positive")
@@ -75,6 +123,7 @@ func (saleReq *SaleGlassRequest) IncreaseQty(id string, qty int, db *gorm.DB) er
 	}
 
 	return nil
+
 }
 
 func (saleReq *SaleGlassRequest) DecreaseQty(id string, qty int, db *gorm.DB) error {
@@ -83,14 +132,47 @@ func (saleReq *SaleGlassRequest) DecreaseQty(id string, qty int, db *gorm.DB) er
 		return fmt.Errorf("negative stock error: quantity number should be positive")
 	}
 
-	var p queryUtils.ProductQty
+	var (
+		p          queryUtils.ProductQty
+		requestQty int
+		newQty     int
+	)
 
-	err := db.Model(&Glass{}).Where("id = ?", id).Find(&p).Error
+	err, ver := saleReq.findIfExist(id, db)
 	if err != nil {
 		return err
 	}
 
-	newQty := p.Quantity - qty
+	if ver == true {
+
+		err := db.Model(&Glass{}).Where("id = ?", id).Find(&p).Error
+		if err != nil {
+			return err
+		}
+
+		requestQty = qty - saleReq.GlassQty
+
+		newQty = p.Quantity - requestQty
+
+		if newQty < 0 {
+			return fmt.Errorf("negative stock error: quantity should be positive")
+		}
+
+		err = db.Model(&Glass{}).Where("id = ?", id).Update("quantity", newQty).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+
+	}
+
+	err = db.Model(&Glass{}).Where("id = ?", id).Find(&p).Error
+	if err != nil {
+		return err
+	}
+
+	newQty = p.Quantity - qty
 
 	if newQty < 0 {
 		return fmt.Errorf("negative stock error: quantity should be positive")
@@ -102,6 +184,7 @@ func (saleReq *SaleGlassRequest) DecreaseQty(id string, qty int, db *gorm.DB) er
 	}
 
 	return nil
+
 }
 
 func (g *SaleGlassRequest) GetWidthAndHeightAvailableOfProduct(id string, db *gorm.DB) (error, map[string]float64) {
@@ -119,20 +202,130 @@ func (g *SaleGlassRequest) GetWidthAndHeightAvailableOfProduct(id string, db *go
 	}
 }
 
-func (g *SaleGlassRequest) ReduceArea(id string, width, height float64, db *gorm.DB) error {
+func (g *SaleGlassRequest) IncreaseArea(id string, width, height float64, db *gorm.DB) error {
 
-	var p queryUtils.ProductArea
+	var pq queryUtils.ProductCategory
 
-	err := db.Model(&Glass{}).Where("id = ?", id).Find(&p).Error
+	err := db.Model(&Glass{}).Where("id = ?", id).Find(&pq).Error
 	if err != nil {
+		return err
+	}
+
+	if pq.Category == "tempered" {
 		return nil
+	}
+
+	var (
+		p         queryUtils.ProductArea
+		newWidth  float64
+		newHeight float64
+	)
+
+	err = db.Model(&Glass{}).Where("id = ?", id).Find(&p).Error
+	if err != nil {
+		return err
+	}
+
+	if width < 0 || height < 0 {
+		return fmt.Errorf("width or height is negative")
+	}
+
+	err, ver := g.findIfExist(id, db)
+	if err != nil {
+		return err
+	}
+
+	if ver == true {
+
+		increaseWidth := width - g.RequestWidth
+		increaseHeight := height - g.RequestHeight
+
+		newWidth = p.WidthAvailable + increaseWidth
+		newHeight = p.HeightAvailable + increaseHeight
+
+		err = db.Model(&Glass{}).Where("id = ?", id).Updates(map[string]interface{}{"width_available": newWidth, "height_available": newHeight}).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+
+	}
+
+	newWidth = p.WidthAvailable + width
+	newHeight = p.HeightAvailable + height
+
+	err = db.Model(&Glass{}).Where("id = ?", id).Updates(map[string]interface{}{"width_available": newWidth, "height_available": newHeight}).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func (g *SaleGlassRequest) DecreaseArea(id string, width, height float64, db *gorm.DB) error {
+
+	var pq queryUtils.ProductCategory
+
+	err := db.Model(&Glass{}).Where("id = ?", id).Find(&pq).Error
+	if err != nil {
+		return err
+	}
+
+	if pq.Category == "tempered" {
+		return nil
+	}
+
+	var (
+		p         queryUtils.ProductArea
+		newWidth  float64
+		newHeight float64
+	)
+
+	err = db.Model(&Glass{}).Where("id = ?", id).Find(&p).Error
+	if err != nil {
+		return err
 	}
 
 	if p.WidthAvailable < width || p.HeightAvailable < height {
 		return fmt.Errorf("width or height is large than in stock")
 	}
 
-	err = db.Model(&Glass{}).Where("id = ?", id).Updates(map[string]interface{}{"width_available": width, "height_available": height}).Error
+	err, ver := g.findIfExist(id, db)
+	if err != nil {
+		return err
+	}
+
+	if ver == true {
+
+		requestWidth := width - g.RequestWidth
+		requestHeight := height - g.RequestHeight
+
+		newWidth = p.WidthAvailable - requestWidth
+		newHeight = p.HeightAvailable - requestHeight
+
+		if newWidth < 0 || newHeight < 0 {
+			return fmt.Errorf("negative stock error: width or height should be positive or zero")
+		}
+
+		err = db.Model(&Glass{}).Where("id = ?", id).Updates(map[string]interface{}{"width_available": newWidth, "height_available": newHeight}).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+
+	}
+
+	newWidth = p.WidthAvailable - width
+	newHeight = p.HeightAvailable - height
+
+	if newWidth < 0 || newHeight < 0 {
+		return fmt.Errorf("negative stock error: width or height should be positive or zero")
+	}
+
+	err = db.Model(&Glass{}).Where("id = ?", id).Updates(map[string]interface{}{"width_available": newWidth, "height_available": newHeight}).Error
 	if err != nil {
 		return err
 	}
