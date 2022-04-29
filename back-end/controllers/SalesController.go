@@ -267,15 +267,62 @@ func UpdateSale(fctx *fiber.Ctx) error {
 			})
 		}
 
-		err = v.DecreaseQty(v.ID, v.GlassQty, db)
+		err, requestArea := v.GetWidthAndHeightOfRequest(v.ID, db)
 		if err != nil {
 			return err
 		}
 
-		err = v.DecreaseArea(v.GlassID, v.RequestWidth, v.RequestHeight, db)
+		log.Printf("---> RequestWidth: %v, RequestHeight: %v, RequestArea: %v", v.RequestWidth, v.RequestHeight, requestArea)
+
+		// Ifs for increase or same width and height
+		if v.RequestWidth != requestArea["width"] && v.RequestWidth < requestArea["width"] {
+			err = v.IncreaseArea(v.GlassID, v.RequestWidth, 0, db)
+			if err != nil {
+				return err
+			}
+		}
+
+		if v.RequestHeight != requestArea["height"] && v.RequestHeight < requestArea["height"] {
+			err = v.IncreaseArea(v.GlassID, 0, v.RequestHeight, db)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Ifs for decrease or same width and height
+		if v.RequestWidth != requestArea["width"] && v.RequestWidth > requestArea["width"] {
+			err = v.DecreaseArea(v.GlassID, v.RequestWidth, 0, db)
+			if err != nil {
+				return err
+			}
+		}
+
+		if v.RequestHeight != requestArea["height"] && v.RequestHeight > requestArea["height"] {
+			err = v.DecreaseArea(v.GlassID, 0, v.RequestHeight, db)
+			if err != nil {
+				return err
+			}
+		}
+
+		err, requestQty := v.GetTotalRequestQty(v.ID, db)
 		if err != nil {
 			return err
 		}
+
+		if v.GlassQty != requestQty {
+			err = v.DecreaseQty(v.GlassID, v.GlassQty, db)
+			if err != nil {
+				return err
+			}
+		}
+
+		if v.GlassQty < requestQty {
+			err = v.IncreaseQty(v.GlassID, v.GlassQty, db)
+			if err != nil {
+				return err
+			}
+		}
+
 	}
 
 	for _, v := range result.SalePartRequests {
@@ -296,9 +343,26 @@ func UpdateSale(fctx *fiber.Ctx) error {
 			})
 		}
 
-		err = v.DecreaseQty(v.PartID, v.PartQty, db)
+		err, requestQty := v.GetTotalRequestQty(v.ID, db)
 		if err != nil {
 			return err
+		}
+
+		log.Printf("---> PartQty: %v, requestQty: %v", v.PartQty, requestQty)
+
+		if v.PartQty > requestQty {
+			err = v.DecreaseQty(v.PartID, v.PartQty, db)
+			if err != nil {
+				return err
+			}
+		}
+
+		if v.PartQty < requestQty {
+			log.Println(v.PartQty, requestQty)
+			err = v.IncreaseQty(v.PartID, v.PartQty, db)
+			if err != nil {
+				return err
+			}
 		}
 
 	}

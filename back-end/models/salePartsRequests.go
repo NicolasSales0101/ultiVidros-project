@@ -34,22 +34,6 @@ func (saleRequest *SalePartRequest) BeforeCreate(scope *gorm.DB) (err error) {
 	return nil
 }
 
-func (saleReq *SalePartRequest) findIfExist(id string, db *gorm.DB) (error, bool) {
-
-	var p queryUtils.ProductId
-
-	err := db.Model(saleReq).Where("id = ?", id).Find(p).Error
-	if err != nil {
-		return err, false
-	}
-
-	if p.ID == "" {
-		return nil, false
-	}
-
-	return nil, true
-}
-
 func (saleReq *SalePartRequest) GetTotalProductQty(id string, db *gorm.DB) (error, int) {
 
 	var p queryUtils.ProductQty
@@ -63,6 +47,23 @@ func (saleReq *SalePartRequest) GetTotalProductQty(id string, db *gorm.DB) (erro
 
 }
 
+func (saleReq *SalePartRequest) GetTotalRequestQty(id string, db *gorm.DB) (error, int) {
+
+	type RequestQty struct {
+		PartQty int
+	}
+
+	var partReqQty RequestQty
+
+	err := db.Model(saleReq).Where("id = ?", id).Find(&partReqQty).Error
+	if err != nil {
+		return err, 0
+	}
+
+	return nil, partReqQty.PartQty
+
+}
+
 func (saleReq *SalePartRequest) IncreaseQty(id string, qty int, db *gorm.DB) error {
 
 	if qty < 0 {
@@ -71,20 +72,40 @@ func (saleReq *SalePartRequest) IncreaseQty(id string, qty int, db *gorm.DB) err
 
 	var (
 		p           queryUtils.ProductQty
+		pid         queryUtils.ProductId
 		increaseQty int
 		newQty      int
 	)
 
-	err, ver := saleReq.findIfExist(id, db)
+	err := db.Model(saleReq).Where("id = ?", saleReq.ID).Find(&pid).Error
+
 	if err != nil {
 		return err
 	}
 
-	if ver == true {
+	if pid.ID != "" {
 
 		err := db.Model(&Part{}).Where("id = ?", id).Find(&p).Error
 		if err != nil {
 			return err
+		}
+
+		if qty < saleReq.PartQty {
+
+			increaseQty = saleReq.PartQty - qty
+
+			newQty = p.Quantity + increaseQty
+
+			if newQty < 0 {
+				return fmt.Errorf("negative stock error: quantity should be positive")
+			}
+
+			err = db.Model(&Part{}).Where("id = ?", id).Update("quantity", newQty).Error
+			if err != nil {
+				return err
+			}
+
+			return nil
 		}
 
 		increaseQty = qty - saleReq.PartQty
@@ -131,16 +152,21 @@ func (saleReq *SalePartRequest) DecreaseQty(id string, qty int, db *gorm.DB) err
 
 	var (
 		p          queryUtils.ProductQty
+		pid        queryUtils.ProductId
 		requestQty int
 		newQty     int
 	)
 
-	err, ver := saleReq.findIfExist(id, db)
+	err := db.Model(saleReq).Where("id = ?", saleReq.ID).Find(&pid).Error
 	if err != nil {
 		return err
 	}
 
-	if ver == true {
+	if pid.ID != "" {
+
+		if qty == 0 {
+			return nil
+		}
 
 		err := db.Model(&Part{}).Where("id = ?", id).Find(&p).Error
 		if err != nil {
