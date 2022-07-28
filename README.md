@@ -1,7 +1,9 @@
-# ultiVidros-project
-Esse projeto é sobre a criação de uma aplicação Full Stack, com Back-end e Front-end, para uma vidraçaria chamada “Ulti Vidros Mamoré”.
+# Projeto Ulti Vidros
 
-## Project Stack
+Esse projeto é sobre a criação de uma aplicação Back-end para uma vidraçaria. 
+
+# 📃 Project Stack
+
 ### **Back-end**
 
 - Golang
@@ -11,22 +13,4 @@ Esse projeto é sobre a criação de uma aplicação Full Stack, com Back-end e 
     - Etc.
 - MySQL
 
-### Front-end
-
-- JavaScript
-- Node.js
-    - React.js
-        - React-icons ou outra lib de icons
-    - React-Router-Dom
-- Etc.
-
-A comunicação entre o Back e o Frontend vai ser estabelecida por uma API Restfull criada em Go.
-
-## Para executar o projeto
-- src ($HOME/go/src/github.com/username/ultiVidros-project)
-    - go run back-end/main.go
-ou
-- ($HOME/go/src/github.com/username/ultiVidros-project)
-    - go run main.go
-
-**X** Em Processo **X**
+O back-end será uma API Rest em **Go**.
